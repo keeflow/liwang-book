@@ -131,11 +131,11 @@ function onClear() {
           <p class="about__quote serif">记得快、看着熟、查得到、算得清、长期留得住。</p>
           <p class="row__hint" style="margin-top: 10px; line-height: 1.75">
             礼往将纸质礼簿电子化：查看时像一本传统礼簿，录入时像现代
-            App。所有数据保存在本机浏览器中，可随时导出备份，不上传云端。
+            App。所有数据保存在本机浏览器的 IndexedDB 中，可随时导出备份，不上传云端。
           </p>
           <div class="about__row">
             <span class="dim">版本</span>
-            <span class="mono">v1.1.0</span>
+            <span class="mono">v1.2.0</span>
           </div>
           <div class="about__row">
             <span class="dim">技术栈</span>

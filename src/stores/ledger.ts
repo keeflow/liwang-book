@@ -9,27 +9,36 @@ import type {
   Settings,
 } from '@/types'
 import { normalizeName, uid } from '@/utils/id'
+import { idbGet, idbSet, migrateFromLocalStorage } from '@/utils/db'
+import { useToast } from '@/stores/toast'
 
 const BOOKS_KEY = 'liwang.books.v1'
 const RECORDS_KEY = 'liwang.records.v1'
 const SETTINGS_KEY = 'liwang.settings.v1'
 
-function load<T>(key: string, fallback: T): T {
+const DEFAULT_SETTINGS: Settings = {
+  moneyStyle: 'traditional',
+  familyName: '',
+  greeting: true,
+}
+
+async function load<T>(key: string, fallback: T): Promise<T> {
   try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return fallback
-    const parsed = JSON.parse(raw)
-    return (parsed ?? fallback) as T
-  } catch {
+    const value = await idbGet<T>(key)
+    return (value ?? fallback) as T
+  } catch (e) {
+    console.warn('[礼往] IndexedDB 读取失败', key, e)
     return fallback
   }
 }
 
-function save(key: string, value: unknown) {
+/** 写入 IndexedDB；失败时提示用户，避免静默丢数据 */
+async function save(key: string, value: unknown): Promise<void> {
   try {
-    localStorage.setItem(key, JSON.stringify(value))
+    await idbSet(key, value)
   } catch (e) {
-    console.warn('[礼往] 本地存储写入失败', e)
+    console.warn('[礼往] IndexedDB 写入失败', key, e)
+    useToast().error('本地数据保存失败，请检查浏览器存储权限')
   }
 }
 
@@ -43,13 +52,10 @@ function isDemo(): boolean {
 
 export const useLedgerStore = defineStore('ledger', {
   state: () => ({
-    books: load<Book[]>(BOOKS_KEY, []),
-    records: load<GiftRecord[]>(RECORDS_KEY, []),
-    settings: load<Settings>(SETTINGS_KEY, {
-      moneyStyle: 'traditional',
-      familyName: '',
-      greeting: true,
-    } as Settings),
+    books: [] as Book[],
+    records: [] as GiftRecord[],
+    settings: { ...DEFAULT_SETTINGS },
+    /** 首屏数据是否已从 IndexedDB 载入完成 */
     ready: false,
   }),
 
@@ -149,9 +155,25 @@ export const useLedgerStore = defineStore('ledger', {
   },
 
   actions: {
-    init() {
-      if (isDemo()) this.loadDemo()
-      this.ready = true
+    /** 从 IndexedDB 载入数据（首次启动会先迁移旧版 localStorage 数据） */
+    async init() {
+      try {
+        await migrateFromLocalStorage()
+        const [books, records, settings] = await Promise.all([
+          load<Book[]>(BOOKS_KEY, []),
+          load<GiftRecord[]>(RECORDS_KEY, []),
+          load<Settings>(SETTINGS_KEY, { ...DEFAULT_SETTINGS }),
+        ])
+        if (Array.isArray(books)) this.books = books
+        if (Array.isArray(records)) this.records = records
+        if (settings) this.settings = { ...DEFAULT_SETTINGS, ...settings }
+        if (isDemo()) this.loadDemo()
+      } catch (e) {
+        console.warn('[礼往] 数据初始化失败', e)
+        useToast().error('本地数据载入失败，请刷新重试')
+      } finally {
+        this.ready = true
+      }
     },
 
     // ---------- 礼簿 ----------
@@ -251,13 +273,13 @@ export const useLedgerStore = defineStore('ledger', {
     // ---------- 设置 ----------
     updateSettings(patch: Partial<Settings>) {
       this.settings = { ...this.settings, ...patch }
-      save(SETTINGS_KEY, this.settings)
+      void save(SETTINGS_KEY, this.settings)
     },
 
     toggleMoneyStyle() {
       this.settings.moneyStyle =
         this.settings.moneyStyle === 'traditional' ? 'numeric' : 'traditional'
-      save(SETTINGS_KEY, this.settings)
+      void save(SETTINGS_KEY, this.settings)
     },
 
     // ---------- 备份 ----------
@@ -296,15 +318,16 @@ export const useLedgerStore = defineStore('ledger', {
     },
 
     persistBooks() {
-      save(BOOKS_KEY, this.books)
+      return save(BOOKS_KEY, this.books)
     },
     persistRecords() {
-      save(RECORDS_KEY, this.records)
+      return save(RECORDS_KEY, this.records)
+    },
+    persistSettings() {
+      return save(SETTINGS_KEY, this.settings)
     },
     persistAll() {
-      this.persistBooks()
-      this.persistRecords()
-      save(SETTINGS_KEY, this.settings)
+      return Promise.all([this.persistBooks(), this.persistRecords(), this.persistSettings()])
     },
 
     /** 演示数据，仅在 ?demo=1 时载入 */

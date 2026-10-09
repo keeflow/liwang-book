@@ -19,7 +19,11 @@ const showTabs = computed(() => !!route.meta.tab)
   <div class="app">
     <Sidebar />
     <main class="main">
-      <router-view v-slot="{ Component }">
+      <div v-if="!store.ready" class="app-loading">
+        <div class="app-loading__seal">礼</div>
+        <p class="app-loading__text">正在翻开礼簿…</p>
+      </div>
+      <router-view v-else v-slot="{ Component }">
         <component :is="Component" />
       </router-view>
       <BottomNav v-if="showTabs" />
@@ -27,3 +31,48 @@ const showTabs = computed(() => !!route.meta.tab)
   </div>
   <ToastHost />
 </template>
+
+<style scoped>
+.app-loading {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.app-loading__seal {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--red);
+  color: #f6ecd8;
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+  animation: seal-pulse 1.4s ease-in-out infinite;
+}
+
+.app-loading__text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-3);
+  letter-spacing: 0.16em;
+}
+
+@keyframes seal-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+</style>

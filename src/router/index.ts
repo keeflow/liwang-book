@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 
 const HomeView = () => import('@/views/HomeView.vue')
 const BooksView = () => import('@/views/BooksView.vue')
@@ -13,8 +13,9 @@ const SearchView = () => import('@/views/SearchView.vue')
 const PrintView = () => import('@/views/PrintView.vue')
 
 const router = createRouter({
-  // GitHub Pages 等静态托管无服务端路由回退，使用 hash 模式保证刷新、直达链接可用
-  history: createWebHashHistory(),
+  // history 模式：base 由构建时的 base 决定（生产为 /liwang-book/，本地为 /）
+  // 静态托管下的深链接刷新由构建产物中的 404.html 兜底
+  history: createWebHistory(import.meta.env.BASE_URL),
   scrollBehavior: () => ({ top: 0 }),
   routes: [
     { path: '/', name: 'home', component: HomeView, meta: { tab: 'books' } },
