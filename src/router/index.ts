@@ -13,6 +13,7 @@ const SearchView = () => import('@/views/SearchView.vue')
 const PrintView = () => import('@/views/PrintView.vue')
 
 const router = createRouter({
+  // GitHub Pages 等静态托管无服务端路由回退，使用 hash 模式保证刷新、直达链接可用
   history: createWebHashHistory(),
   scrollBehavior: () => ({ top: 0 }),
   routes: [
