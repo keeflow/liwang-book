@@ -117,36 +117,31 @@ function print() {
 
 <style scoped>
 .print-root {
-  background: #e7ddc7;
-  min-height: 100vh;
-  padding: 0 0 40px;
+  flex: 1;
+  width: 100%;
+  padding: 0 36px 64px;
+  max-width: 1360px;
+  margin: 0 auto;
 }
 .print-bar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  background: rgba(250, 245, 233, 0.95);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--line-2);
+  gap: 12px;
+  padding: 34px 2px 14px;
 }
 .print-tip {
-  text-align: center;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink-3);
-  padding: 10px 16px 0;
+  padding: 0 2px 18px;
 }
 
 .p-page {
-  width: min(100% - 24px, 720px);
-  margin: 14px auto;
+  width: min(100%, 760px);
+  margin: 0 auto 20px;
   background: #fdfaf1;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 26px 24px;
+  padding: 30px 34px;
   box-shadow: var(--shadow);
   color: var(--ink);
 }
@@ -298,10 +293,10 @@ function print() {
 }
 .p-sign {
   text-align: center;
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--ink-3);
   letter-spacing: 0.14em;
-  margin-top: 18px;
+  margin-top: 20px;
 }
 
 /* 打印 */
@@ -313,6 +308,7 @@ function print() {
   .print-root {
     background: #fff;
     padding: 0;
+    max-width: none;
   }
   .p-page {
     width: 100%;

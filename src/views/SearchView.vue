@@ -41,7 +41,7 @@ const matchedRecords = computed(() => {
   if (!has.value) return []
   return store.records
     .filter((r) => r.name.toLowerCase().includes(kw.value) || (r.phone || '').includes(kw.value))
-    .slice(0, 40)
+    .slice(0, 60)
     .map((r) => ({ record: r, book: store.getBook(r.bookId) }))
 })
 
@@ -49,21 +49,24 @@ const totalHits = computed(
   () => matchedContacts.value.length + matchedBooks.value.length + matchedRecords.value.length,
 )
 
-const suggestions = computed(() => store.contacts.slice(0, 8))
+const suggestions = computed(() => store.contacts.slice(0, 12))
 </script>
 
 <template>
   <div class="page">
-    <div class="topbar">
+    <header class="topbar">
       <button class="icon-btn" @click="router.back()">
         <AppIcon name="left" :size="19" />
       </button>
       <div class="searchbox">
-        <AppIcon name="search" :size="16" />
+        <AppIcon name="search" :size="17" />
         <input ref="input" v-model="keyword" placeholder="搜索姓名、手机号、礼簿名称" />
         <button v-if="keyword" @click="keyword = ''"><AppIcon name="close" :size="15" /></button>
       </div>
-    </div>
+      <span v-if="has" class="dim" style="font-size: 12.5px; flex: none">
+        {{ totalHits }} 条结果
+      </span>
+    </header>
 
     <!-- 未输入：常用 -->
     <template v-if="!has">
@@ -84,73 +87,85 @@ const suggestions = computed(() => store.contacts.slice(0, 8))
     </template>
 
     <template v-else>
-      <p v-if="totalHits" class="hits dim">找到 {{ totalHits }} 条相关结果</p>
+      <div class="results">
+        <!-- 宾客 -->
+        <section class="res-col">
+          <div class="res-col__head">
+            <h2 class="serif">宾客档案</h2>
+            <span class="dim">{{ matchedContacts.length }}</span>
+          </div>
+          <article
+            v-for="c in matchedContacts"
+            :key="c.id"
+            class="hit"
+            @click="router.push(`/contact/${encodeURIComponent(c.id)}`)"
+          >
+            <div class="hit__avatar serif">{{ c.name.slice(0, 1) }}</div>
+            <div class="hit__main">
+              <p class="hit__title serif">{{ c.name }}</p>
+              <p class="hit__sub">
+                <span v-if="c.relation">{{ c.relation }} · </span>
+                <span v-if="c.phone" class="mono">{{ c.phone }} · </span>
+                {{ c.records.length }} 次往来
+              </p>
+            </div>
+            <div class="hit__nums">
+              <span class="is-in">收 {{ formatMoney(c.received) }}</span>
+              <span class="is-out">送 {{ formatMoney(c.sent) }}</span>
+            </div>
+          </article>
+          <p v-if="!matchedContacts.length" class="res-empty">没有匹配的宾客</p>
+        </section>
 
-      <!-- 宾客 -->
-      <section v-if="matchedContacts.length">
-        <div class="section-title"><h2>宾客档案</h2></div>
-        <article
-          v-for="c in matchedContacts"
-          :key="c.id"
-          class="hit"
-          @click="router.push(`/contact/${encodeURIComponent(c.id)}`)"
-        >
-          <div class="hit__avatar serif">{{ c.name.slice(0, 1) }}</div>
-          <div class="hit__main">
-            <p class="hit__title serif">{{ c.name }}</p>
-            <p class="hit__sub">
-              <span v-if="c.relation">{{ c.relation }} · </span>
-              <span v-if="c.phone" class="mono">{{ c.phone }} · </span>
-              {{ c.records.length }} 次往来
-            </p>
+        <!-- 礼簿 -->
+        <section class="res-col">
+          <div class="res-col__head">
+            <h2 class="serif">礼簿</h2>
+            <span class="dim">{{ matchedBooks.length }}</span>
           </div>
-          <div class="hit__nums">
-            <span class="is-in">收 {{ formatMoney(c.received) }}</span>
-            <span class="is-out">送 {{ formatMoney(c.sent) }}</span>
-          </div>
-        </article>
-      </section>
+          <article
+            v-for="b in matchedBooks"
+            :key="b.id"
+            class="hit"
+            @click="router.push(`/book/${b.id}/cover`)"
+          >
+            <div class="hit__avatar hit__avatar--book serif">簿</div>
+            <div class="hit__main">
+              <p class="hit__title serif">{{ b.name }}</p>
+              <p class="hit__sub">
+                {{ toDisplayDate(b.date) }} · {{ store.bookPeople(b.id) }} 人 ·
+                {{ store.recordsOf(b.id).length }} 笔
+              </p>
+            </div>
+            <AppIcon name="right" :size="15" />
+          </article>
+          <p v-if="!matchedBooks.length" class="res-empty">没有匹配的礼簿</p>
+        </section>
 
-      <!-- 礼簿 -->
-      <section v-if="matchedBooks.length">
-        <div class="section-title"><h2>礼簿</h2></div>
-        <article
-          v-for="b in matchedBooks"
-          :key="b.id"
-          class="hit"
-          @click="router.push(`/book/${b.id}/cover`)"
-        >
-          <div class="hit__avatar hit__avatar--book serif">簿</div>
-          <div class="hit__main">
-            <p class="hit__title serif">{{ b.name }}</p>
-            <p class="hit__sub">
-              {{ toDisplayDate(b.date) }} · {{ store.bookPeople(b.id) }} 人 ·
-              {{ store.recordsOf(b.id).length }} 笔
-            </p>
+        <!-- 记录 -->
+        <section class="res-col">
+          <div class="res-col__head">
+            <h2 class="serif">记录</h2>
+            <span class="dim">{{ matchedRecords.length }}</span>
           </div>
-          <AppIcon name="right" :size="15" />
-        </article>
-      </section>
-
-      <!-- 记录 -->
-      <section v-if="matchedRecords.length">
-        <div class="section-title"><h2>记录</h2></div>
-        <article
-          v-for="m in matchedRecords"
-          :key="m.record.id"
-          class="hit"
-          @click="m.book && router.push(`/book/${m.book.id}`)"
-        >
-          <div class="hit__main">
-            <p class="hit__title serif">{{ m.record.name }}</p>
-            <p class="hit__sub">
-              {{ m.book?.name }} · {{ m.book ? toDisplayDate(m.book.date) : '' }}
-              <template v-if="m.record.note"> · {{ m.record.note }}</template>
-            </p>
-          </div>
-          <span class="hit__amount mono">{{ formatMoney(m.record.amount) }}</span>
-        </article>
-      </section>
+          <article
+            v-for="m in matchedRecords"
+            :key="m.record.id"
+            class="hit"
+            @click="m.book && router.push(`/book/${m.book.id}`)"
+          >
+            <div class="hit__main">
+              <p class="hit__title serif">{{ m.record.name }}</p>
+              <p class="hit__sub">
+                {{ m.book?.name }} · {{ m.book ? toDisplayDate(m.book.date) : '' }}
+                <template v-if="m.record.note"> · {{ m.record.note }}</template>
+              </p>
+            </div>
+            <span class="hit__amount mono">{{ formatMoney(m.record.amount) }}</span>
+          </article>
+          <p v-if="!matchedRecords.length" class="res-empty">没有匹配的记录</p>
+        </section>
+      </div>
 
       <div v-if="!totalHits" class="empty">
         <div class="empty__mark serif">寻</div>
@@ -166,26 +181,51 @@ const suggestions = computed(() => store.contacts.slice(0, 8))
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 42px;
-  padding: 0 12px;
-  background: rgba(255, 255, 255, 0.75);
+  gap: 9px;
+  height: 46px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.76);
   border: 1px solid var(--line-2);
-  border-radius: 12px;
+  border-radius: 13px;
   color: var(--ink-3);
   min-width: 0;
+  max-width: 560px;
 }
 .searchbox input {
   flex: 1;
   border: none;
   background: none;
-  font-size: 14.5px;
+  font-size: 15px;
   min-width: 0;
 }
-.hits {
-  font-size: 12px;
-  padding: 4px 4px 0;
+
+.results {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  align-items: start;
 }
+.res-col {
+  min-width: 0;
+}
+.res-col__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 4px 12px;
+  border-bottom: 1px solid var(--line-2);
+  margin-bottom: 12px;
+}
+.res-col__head h2 {
+  font-size: 16px;
+  letter-spacing: 0.1em;
+}
+.res-empty {
+  font-size: 12.5px;
+  color: var(--ink-4);
+  padding: 10px 4px;
+}
+
 .hit {
   display: flex;
   align-items: center;
@@ -197,9 +237,12 @@ const suggestions = computed(() => store.contacts.slice(0, 8))
   margin-bottom: 8px;
   box-shadow: var(--shadow-sm);
   color: var(--ink-3);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.hit:active {
-  transform: scale(0.988);
+.hit:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
 }
 .hit__avatar {
   width: 38px;
@@ -256,5 +299,20 @@ const suggestions = computed(() => store.contacts.slice(0, 8))
   font-weight: 600;
   color: var(--red);
   flex: none;
+}
+
+@media (max-width: 1200px) {
+  .results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 959px) {
+  .results {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .searchbox {
+    max-width: none;
+  }
 }
 </style>

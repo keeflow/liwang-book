@@ -300,7 +300,7 @@ function save(continueNext: boolean) {
 
 <style scoped>
 .quick {
-  max-height: 94vh;
+  max-height: min(92vh, 760px);
 }
 .quick__head {
   display: flex;
